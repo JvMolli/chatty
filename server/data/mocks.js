@@ -1,0 +1,86 @@
+import R from 'ramda';
+import faker from 'faker';
+import { db } from './connectors';
+
+// create fake starter data
+const GROUPS = 4;
+const USERS_PER_GROUP = 5;
+const MESSAGES_PER_USER = 5;
+
+faker.seed(123); // get consistent data every time we reload app
+
+// you don't need to stare at this code too hard
+// just trust that it fakes a bunch of groups, users, and messages
+
+const mockDB = async ({ populating = true, force = true } = {}) => {
+  console.log('creating database....');
+  await db.sync({ force });
+
+  if (!populating) {
+    return Promise.resolve(true);
+  }
+
+  console.log('creating image');
+  await Promise.all(
+    R.times(
+      () => db.models.image.create({
+        uri: faker.image.imageUrl(25, 25, 'people'),
+      }),
+      5,
+    ),
+  );
+
+  console.log('populating groups....');
+  const groups = await Promise.all(
+    R.times(
+      () => db.models.group.create({
+        name: faker.lorem.words(3),
+        imageId: faker.random.number({ min: 0, max: 4 }),
+      }),
+      GROUPS,
+    ),
+  );
+
+  console.log('populating users....');
+  const usersGroups = await Promise.all(
+    R.map(async (group) => {
+      const users = await Promise.all(
+        R.times(async () => {
+          const user = await group.createUser({
+            email: faker.internet.email(),
+            username: faker.internet.userName(),
+            password: faker.internet.password(),
+          });
+          await Promise.all(
+            R.times(
+              () => db.models.message.create({
+                userId: user.id,
+                groupId: group.id,
+                text: faker.lorem.sentences(3),
+              }),
+              MESSAGES_PER_USER,
+            ),
+          );
+          return user;
+        }, USERS_PER_GROUP),
+      );
+      return users;
+    }, groups),
+  );
+
+  console.log('populating friends....');
+  await Promise.all(
+    R.flatten(
+      R.map(
+        users => users.map((current, i) => users.map((user, j) => (i !== j ? current.addFriend(user) : false))),
+        usersGroups,
+      ),
+    ),
+  );
+
+  console.log('¡DATABASE CREATED!');
+
+  return true;
+};
+
+export default mockDB;
