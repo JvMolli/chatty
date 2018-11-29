@@ -50,12 +50,9 @@ const styles = StyleSheet.create({
 
 // eslint-disable-next-line react/prefer-stateless-function
 class DetailEdit extends Component {
-  static NavigationOptions = ({ navigation }) => {
-    const { state } = navigation;
-    return {
-      title: 'New Group',
-    };
-  };
+  static navigationOptions = ({ navigation }) => ({
+    title: `${navigation.state.params.name}`,
+  });
 
   // eslint-disable-next-line no-useless-constructor
   constructor(props) {

@@ -1,3 +1,4 @@
+/* eslint-disable arrow-parens */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import {
@@ -7,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  TextInput,
   View,
 } from 'react-native';
 import { graphql, compose } from 'react-apollo';
@@ -16,6 +18,7 @@ import GROUP_QUERY from '../graphql/group.query';
 import { USER_QUERY } from '../graphql/user.query';
 import DELETE_GROUP_MUTATION from '../graphql/delete-group.mutation';
 import LEAVE_GROUP_MUTATION from '../graphql/leave-group.mutation';
+import EDIT_NAME_GROUP_MUTATION from '../graphql/changeName-group.mutation';
 
 import Logo from '../components/logo';
 
@@ -87,6 +90,16 @@ class GroupDetails extends Component {
     title: `${navigation.state.params.title}`,
   });
 
+  constructor(props) {
+    super(props);
+    const { navigation } = this.props;
+    const { title } = navigation.state.params;
+
+    this.state = {
+      nameIsInput: `${title}`,
+    };
+  }
+
   keyExtractor = item => item.id.toString();
 
   renderItem = ({ item: user }) => (
@@ -96,12 +109,13 @@ class GroupDetails extends Component {
     </View>
   );
 
-  imageEdit = (group) => {
+  editGroup = group => {
     const {
       navigation: { navigate },
     } = this.props;
     navigate('DetailEdit', {
       groupId: group.id,
+      name: group.name,
     });
   };
 
@@ -111,7 +125,7 @@ class GroupDetails extends Component {
       .then(() => {
         navigation.dispatch(resetAction);
       })
-      .catch((e) => {
+      .catch(e => {
         console.log(e); // eslint-disable-line no-console
       });
   };
@@ -125,13 +139,22 @@ class GroupDetails extends Component {
       .then(() => {
         navigation.dispatch(resetAction);
       })
-      .catch((e) => {
+      .catch(e => {
         console.log(e); // eslint-disable-line no-console
       });
   };
 
+  reNameGroup = text => {
+    this.setState({ nameIsInput: text });
+    const { updateGroup } = this.props;
+    updateGroup({
+      name: this.nameIsInput,
+    });
+  };
+
   render() {
     const { group, loading } = this.props;
+    const { nameIsInput } = this.state;
 
     // render loading placeholder while we fetch messages
     if (!group || loading) {
@@ -151,13 +174,19 @@ class GroupDetails extends Component {
           ListHeaderComponent={() => (
             <View>
               <View style={styles.detailsContainer}>
-                <TouchableOpacity style={styles.groupImageContainer} onPress={console.log('PPEPEPEPEP')}>
+                <TouchableOpacity
+                  style={styles.groupImageContainer}
+                  onPress={() => console.log('Futura Edicion de Imagen')}
+                >
                   <Logo />
                   <Text>edit</Text>
                 </TouchableOpacity>
-                <View style={styles.groupNameBorder}>
-                  <Text style={styles.groupName}>{group.name}</Text>
-                </View>
+
+                <TextInput
+                  style={styles.groupNameBorder}
+                  value={nameIsInput}
+                  onChangeText={text => this.reNameGroup(text)}
+                />
               </View>
               <Text style={styles.participants}>
                 {`participants: ${group.users.length}`.toUpperCase()}
@@ -168,6 +197,7 @@ class GroupDetails extends Component {
             <View>
               <Button title="Leave Group" onPress={this.leaveGroup} />
               <Button title="Delete Group" onPress={this.deleteGroup} />
+              <Button title="Edit Group" onPress={() => this.editGroup(group)} />
             </View>
           )}
         />
@@ -253,8 +283,17 @@ const leaveGroupMutation = graphql(LEAVE_GROUP_MUTATION, {
   }),
 });
 
+const editNameMutation = graphql(LEAVE_GROUP_MUTATION, {
+  props: ({ mutate }) => ({
+    updateGroup: ({ name }) => mutate({
+      variables: { name },
+    }),
+  }),
+});
+
 export default compose(
   groupQuery,
   deleteGroupMutation,
   leaveGroupMutation,
+  editNameMutation,
 )(GroupDetails);

@@ -13,7 +13,7 @@ import Config from 'react-native-config';
 
 import AppWithNavigationState, { navigationReducer, navigationMiddleware } from './navigation';
 
-const URL = '192.168.1.132:8080';
+const URL = '192.168.1.165:8080';
 
 const store = createStore(
   combineReducers({
